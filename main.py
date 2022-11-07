@@ -30,10 +30,6 @@ object_manager.add(statics)
 
 # core loop
 while True:
-    # debug 
-    # for item, value in object_manager.dict_objects.items():
-    #     print(item, value)
-
     # events
     for event in pg.event.get():
         # quit the game
@@ -55,32 +51,6 @@ while True:
                 if object_manager.player.n_bombs > 0:
                     action_manager.action_buffer.append(actions.DROP_BOMB)
                     object_manager.player.n_bombs -= 1
-
-    # grid-constrained actions
-    # if all(object_manager.player.position % 32 == 0):
-    #     object_manager.player.vector = buffer_vector.copy()
-
-    # if buffer_drop_bomb:
-    #     position = object_manager.player.position.copy()
-    #     if object_manager.player.vector.y == -1: position.y = cfg.display.tile_height * np.ceil(position.y / cfg.display.tile_height)
-    #     if object_manager.player.vector.y == 1: position.y = cfg.display.tile_height * np.floor(position.y / cfg.display.tile_height)
-    #     if object_manager.player.vector.x == -1: position.x = cfg.display.tile_width * np.ceil(position.x / cfg.display.tile_width)
-    #     if object_manager.player.vector.x == 1: position.x = cfg.display.tile_width * np.floor(position.x / cfg.display.tile_width)
-
-    #     object_manager.add(objects.Bomb(position, object_manager.player.n_bomb_radius))
-    #     buffer_drop_bomb = 0
-    
-    # object_manager.player.position += object_manager.player.vector
-
-    # # movement constraints
-    # max_x = cfg.display.screen_width - cfg.display.tile_width
-    # max_y = cfg.display.screen_height - cfg.display.tile_height
-
-    # if object_manager.player.position.x < 0: object_manager.player.position.x = 0
-    # if object_manager.player.position.x > max_x: object_manager.player.position.x = max_x
-
-    # if object_manager.player.position.y < 0: object_manager.player.position.y = 0
-    # if object_manager.player.position.y > max_y: object_manager.player.position.y = max_y
 
     # handle player movement
     action_manager.handle_player_movement()
