@@ -1,6 +1,17 @@
-from turtle import left, up
 import numpy as np
 import pygame as pg
+
+from dataclasses import dataclass
+
+
+class colors:
+    """Color definitions."""
+    SOLID_WALL_COLOR = (0, 0, 127)
+    BREAKABLE_WALL_COLOR = (0, 0, 255)
+    PLAYER_COLOR = (0, 255, 0)
+    EXPLOSION_COLOR = (255, 255, 0)
+    BOMB_COLOR = (255, 0, 0)
+    ITEM_COLOR = (255, 255, 255)
 
 
 class Vec2D(np.ndarray):
@@ -41,140 +52,100 @@ class Vec2D(np.ndarray):
             super().__setattr__(name, value)
 
 
-class Wall(object):
-    """Wall object."""
+class DefaultObject:
+    def __init__(self, position, lifespan, color):
+        """Initialize the object at position with lifespan and color."""
+        self.sprite = pg.Rect(position.x, position.y, 32, 32)
 
-    def __init__(self, position):
         self.position = position
+        self.lifespan = lifespan
 
-        self.color = (0, 0, 127)
-        self.sprite = pg.Rect(self.position.x, self.position.y, 32, 32)
+        self.color = color
 
-        self.n_lifespan = np.inf
 
     def draw(self, screen):
+        """Draw the object on the screen."""
         pg.draw.rect(screen, self.color, self.sprite)
 
-    def on_kill(self, obj_list):
+
+    def on_kill(self, object_manager):
+        """Called when the object's lifespan expires."""
         return
 
 
-class BreakableWall(object):
-    """BreakbleWall object."""
-
+class SolidWall(DefaultObject):
     def __init__(self, position):
-        self.position = position
-
-        self.color = (0, 0, 255)
-        self.sprite = pg.Rect(self.position.x, self.position.y, 32, 32)
-
-        self.n_lifespan = np.inf
+        super().__init__(position, np.inf, colors.SOLID_WALL_COLOR)
 
 
-    def draw(self, screen):
-        # self.sprite.update(self.position, (32, 32))
-        pg.draw.rect(screen, self.color, self.sprite)
+class BreakableWall(DefaultObject):
+    def __init__(self, position):
+        super().__init__(position, np.inf, colors.BREAKABLE_WALL_COLOR)
 
-    def on_kill(self, obj_list):
+
+    def on_kill(self, object_manager):
         if np.random.choice(range(10)) == 0:
-            obj_list.buffer_add_list.append(Item(self.position))
-        return
+            object_manager.render_buffer.append(Item(self.position))
 
 
-class Player(object):
-    """Player object."""
+class Player(DefaultObject):
+    def __init__(self, position):
+        super().__init__(position, np.inf, colors.PLAYER_COLOR)
 
-    def __init__(self):
-        self.position = Vec2D([32, 32])
         self.vector = Vec2D([0, 0])
-
-        self.color = (0, 255, 0)
-        self.sprite = pg.Rect(self.position.x, self.position.y, 32, 32)
 
         self.n_bombs = 99
         self.n_lives = 3
-        self.n_lifespan = np.inf
-
         self.n_bomb_radius = 1
+
 
     def draw(self, screen):
         self.sprite.update(self.position, (32, 32))
         pg.draw.rect(screen, self.color, self.sprite)
 
 
-class Explosion(object):
-    """Explosion object."""
-
+class Explosion(DefaultObject):
     def __init__(self, position):
-        self.position = position
-
-        self.color = (255, 255, 0)
-
-        self.sprite = pg.Rect(self.position.x, self.position.y, 32, 32)
-
-        self.n_lifespan = .5
-
-    def draw(self, screen):
-        pg.draw.rect(screen, self.color, self.sprite)
-
-    def on_kill(self, obj_list):
-        return
+        super().__init__(position, .5, colors.EXPLOSION_COLOR)
 
 
-def create_explosion(position, obj_list, radius=1):
-    explosions = [Explosion(position)]
-    _, sprites = obj_list.get_objs_sprites(Wall)
-
-    for vec in [[0, -1], [0, 1], [-1, 0], [1, 0]]:
-        for i in range(radius + 1):
-            explosion = Explosion(position + Vec2D(vec) * 32 * i)
-            if explosion.sprite.collidelist(sprites) > 0:
-                break
-            explosions += [explosion]
-
-    obj_list.buffer_add_list += explosions
-    return
-
-
-class Bomb(object):
-    """Bomb object."""
-
+class Bomb(DefaultObject):
     def __init__(self, position, radius):
-        self.position = position
+        super().__init__(position, 2, colors.BOMB_COLOR)
+
         self.vector = Vec2D([0, 0])
         self.radius = radius
 
-        self.color = (255, 0, 0)
-        self.sprite = pg.Rect(self.position.x, self.position.y, 32, 32)
-
-        self.n_lifespan = 2
 
     def draw(self, screen):
-        # self.sprite.update(self.position, (32, 32))
+        self.sprite.update(self.position, (32, 32))
         pg.draw.rect(screen, self.color, self.sprite)
 
-    def on_kill(self, obj_list):
-        create_explosion(self.position, obj_list, self.radius)
-        return
+
+    def create_explosion(self, object_manager):
+        explosions = [Explosion(self.position)]
+        _, sprites = object_manager.get_objects_sprites(SolidWall)
+
+        for vec in [[0, -1], [0, 1], [-1, 0], [1, 0]]:
+            for i in range(self.radius + 1):
+                explosion = Explosion(self.position + Vec2D(vec) * 32 * i)
+                if explosion.sprite.collidelist(sprites) > 0:
+                    break
+                explosions += [explosion]
+
+        object_manager.render_buffer += explosions
 
 
-class Item(object):
-    """Item object."""
+    def on_kill(self, object_manager):
+        self.create_explosion(object_manager)
 
+
+class Item(DefaultObject):
     def __init__(self, position):
-        self.position = position
-        self.vector = Vec2D([0, 0])
+        super().__init__(position, np.inf, colors.ITEM_COLOR)
 
-        self.color = (255, 255, 255)
-        self.sprite = pg.Rect(self.position.x, self.position.y, 32, 32)
 
-        self.n_lifespan = np.inf
+    def on_kill(self, object_manager):
+        object_manager.player.n_bomb_radius += 1
 
-    def draw(self, screen):
-        # self.sprite.update(self.position, (32, 32))
-        pg.draw.rect(screen, self.color, self.sprite)
-
-    def on_kill(self, obj_list):
-        obj_list.player.n_bomb_radius += 1
-        return
 
