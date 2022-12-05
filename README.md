@@ -2,7 +2,7 @@ This project is just me having some fun trying to write some clean object orient
 
 ### 05/12/2022
 
-<img src="media/example-1.gif" alt="gif" width="500"/>
+<img src="media/example-2.gif" alt="gif" width="500"/>
 
 A quick coding session where I added the ability to draw text on screen, which was necessary to create different items. And for future UI information.
 This required a major refactor of my config solution, which went from standard `.cfg` to a Python object. It also required further refactoring  to enable 
