@@ -1,11 +1,12 @@
+import os
 import sys
 
 import numpy as np
 import pygame as pg
 
 import assets.objects as objects
-from assets.objects import Vec2D
 
+from assets.objects import Vec2D
 from collections import OrderedDict
 
 
@@ -34,17 +35,22 @@ def quit():
     sys.exit()
 
 
+def load_font(fname, size):
+    """Load font from file."""
+    return pg.font.Font(os.path.join('assets', 'fonts', fname), size)
+
+
 def load_map(fname, cfg=None):
     """Load map from binary NPY file."""
-    mat = np.load(fname)
+    grid = np.load(fname)
     objs = []
 
-    for i in range(mat.shape[0]):
-        for j in range(mat.shape[1]):
-            if mat[i][j] == 1:
-                objs.append(objects.SolidWall(Vec2D([i * 32, + j * 32])))
-            if mat[i][j] == 2:
-                objs.append(objects.BreakableWall(Vec2D([i * 32, + j * 32])))
+    for i in range(grid.shape[0]):
+        for j in range(grid.shape[1]):
+            if grid[i][j] == 1:
+                objs.append(objects.SolidWall(Vec2D([i * cfg.display.tile_size, + j * cfg.display.tile_size]), color=cfg.colors.solid_wall_color))
+            if grid[i][j] == 2:
+                objs.append(objects.BreakableWall(Vec2D([i * cfg.display.tile_size, + j * cfg.display.tile_size]), color=cfg.colors.breakable_wall_color))
 
     return objs
 
@@ -55,7 +61,7 @@ class ObjectManager:
         self.cfg = cfg
 
         # object rendering lists
-        self.render_buffer = []
+        self.render_buffer = list()
         self.render_list = OrderedDict()
 
         # object lifespan lists
@@ -66,10 +72,6 @@ class ObjectManager:
 
         # pointer directly to player object if applicable
         self.player = None
-
-
-    def __iter__(self):
-        return iter(self.render_list.values())
 
 
     def add(self, objs):
@@ -102,16 +104,23 @@ class ObjectManager:
         self.lifespan_limits[-1] = np.inf
 
         self.render_list[idx].on_kill(self)
-        del self.render_list[idx]
+        self.render_list.pop(idx)
 
         self.object_counts -= 1
+
+    
+    def draw_all(self, screen):
+        """Draw all objects to screen."""
+        # draw all objects as ordered in the render list
+        for obj in self.render_list.values():
+            obj.draw(screen, self)
 
 
     def update(self):
         """Update object status, called every frame."""
         # add objects from buffer and clear buffer
         self.add(self.render_buffer)
-        self.render_buffer = []
+        self.render_buffer.clear()
 
         # update and increment lifespan counts
         lifespans = [obj.lifespan for obj in self.render_list.values()]
@@ -137,6 +146,7 @@ class ObjectManager:
         """Get objects and sprites from render list."""
         objects = [object for object in self.render_list.values() if isinstance(object, args)]
         sprites = [object.sprite for object in objects]
+
         return objects, sprites
 
 
@@ -152,7 +162,7 @@ class ActionManager:
         self.object_manager = object_manager
 
         self.movement_buffer = Vec2D([0, 0])
-        self.action_buffer = []
+        self.action_buffer = list()
 
 
     def handle_player_movement(self):
@@ -197,7 +207,7 @@ class ActionManager:
             if object_manager.player.vector.x == 1: 
                 position.x = self.cfg.display.tile_size * np.floor(position.x / self.cfg.display.tile_size)
 
-            object_manager.add(objects.Bomb(position, object_manager.player.n_bomb_radius))
+            object_manager.add(objects.Bomb(position, radius=object_manager.player.n_bomb_radius, color=self.cfg.colors.bomb_color))
             self.action_buffer.remove(actions.DROP_BOMB)
 
 

@@ -1,32 +1,31 @@
-from localconfig import config as cfg
-
 import os
 
 import numpy as np
 import pygame as pg
 
-import assets.colors as colors
 import assets.objects as objects
 
 from assets.objects import Vec2D
+from config import config as cfg
 from core import *
 
 
-# load settings
-cfg.read(open('settings.cfg'))
-
 # init game
 screen, clock, fps = init(cfg)
+
+# init fonts
+cfg.fonts.default_font = load_font(cfg.fonts.default_font, cfg.fonts.default_font_size)
+cfg.fonts.item_font = load_font(cfg.fonts.item_font, cfg.fonts.item_font_size)
 
 # load map
 statics = load_map(os.path.join('assets', 'maps', 'test.npy'), cfg=cfg)
 
 # init objects
 object_manager = ObjectManager(cfg=cfg)
-action_manager = ActionManager(object_manager, cfg=cfg)
-
-object_manager.add(objects.Player(Vec2D([32, 32])))
+object_manager.add(objects.Player(Vec2D([32, 32]), color=cfg.colors.player_color))
 object_manager.add(statics)
+
+action_manager = ActionManager(object_manager, cfg=cfg)
 
 # core loop
 while True:
@@ -63,11 +62,9 @@ while True:
     action_manager.handle_explosion_collisions()
 
     # update
-    screen.fill(colors.BLACK)
+    screen.fill(cfg.colors.background_color)
 
-    for object in object_manager:
-        object.draw(screen)
-
+    object_manager.draw_all(screen)
     object_manager.update()
 
     pg.display.flip()
