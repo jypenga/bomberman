@@ -14,6 +14,7 @@ class Vec2D(np.ndarray):
 
 
     def __array_finalize__(self, obj):
+        """Finalize x and y attributes."""
         if obj is None: 
             return
 
@@ -22,6 +23,7 @@ class Vec2D(np.ndarray):
 
 
     def __getattr__(self, name):
+        """Get first or second element when requesting x or y attribute."""
         if name == 'x':
             return self[0]
         elif name == 'y':
@@ -31,6 +33,7 @@ class Vec2D(np.ndarray):
 
 
     def __setattr__(self, name, value):
+        """Set x and y attributes to first and second element."""
         if name == 'x':
             self[0] = value
         elif name == 'y':
@@ -54,24 +57,7 @@ class DefaultObject:
 
     def draw(self, screen, object_manager):
         """Draw the object on the screen."""
-        # update position if applicable
-        if isinstance(self, (Player, Bomb)):
-            self.sprite.update(self.position, (32, 32))
-
-        # draw sprite
         pg.draw.rect(screen, self.color, self.sprite)
-        
-        # center text on object sprite if defined
-        if isinstance(self, Item):
-            transparent = pg.Rect(self.position.x + 1, self.position.y + 1, 30, 30)
-            pg.draw.rect(screen, object_manager.cfg.colors.background_color, transparent)
-
-            if self.text:
-                font = object_manager.cfg.fonts.item_font
-                text = font.render(self.text, True, object_manager.cfg.colors.item_text_color)
-                text_rect = text.get_rect(center=self.sprite.center)
-
-                screen.blit(text, text_rect)
 
 
     def on_kill(self, object_manager):
@@ -121,6 +107,12 @@ class Player(DefaultObject):
         self.n_bomb_radius = 20
 
 
+    def draw(self, screen, object_manager):
+        """Draw the object on the screen."""
+        self.sprite.update(self.position, (32, 32))
+        super().draw(screen, object_manager)
+
+
 class Explosion(DefaultObject):
     """Explosion object."""
     def __init__(self, position, color, text=None):
@@ -134,6 +126,12 @@ class Bomb(DefaultObject):
 
         self.vector = Vec2D([0, 0])
         self.radius = radius
+
+
+    def draw(self, screen, object_manager):
+        """Draw the object on the screen."""
+        self.sprite.update(self.position, (32, 32))
+        super().draw(screen, object_manager)
 
 
     def create_explosion(self, object_manager, color):
@@ -174,9 +172,21 @@ class Item(DefaultObject):
         super().__init__(position, np.inf, color, text)
 
 
+    def draw(self, screen, object_manager):
+        """Draw the object on the screen."""
+        transparent = pg.Rect(self.position.x + 1, self.position.y + 1, 30, 30)
+        pg.draw.rect(screen, object_manager.cfg.colors.background_color, transparent)
+
+        if self.text:
+            font = object_manager.cfg.fonts.item_font
+            text = font.render(self.text, True, object_manager.cfg.colors.item_text_color)
+            text_rect = text.get_rect(center=self.sprite.center)
+
+            screen.blit(text, text_rect)
+
+
     def on_kill(self, object_manager):
         """Increase bomb radius when item is destroyed."""
-        
         match self.item_type:
             case 'range':
                 object_manager.player.n_bomb_radius += 1
@@ -184,5 +194,3 @@ class Item(DefaultObject):
                 pass
             case 'speed':
                 pass
-
-
