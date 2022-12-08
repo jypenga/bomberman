@@ -10,66 +10,81 @@ from config import config as cfg
 from core import *
 
 
-# init game
-screen, clock, fps = init(cfg)
+if __name__ == '__main__':
+    # init pygame
+    pg.init()
 
-# init fonts
-cfg.fonts.default_font = load_font(cfg.fonts.default_font, cfg.fonts.default_font_size)
-cfg.fonts.item_font = load_font(cfg.fonts.item_font, cfg.fonts.item_font_size)
+    # init fonts
+    load_fonts(cfg)
 
-# load map
-statics = load_map(os.path.join('assets', 'maps', 'test.npy'), cfg=cfg)
+    # init game
+    screen, clock, fps = init(cfg)
 
-# init objects
-object_manager = ObjectManager(cfg=cfg)
-object_manager.add(objects.Player(Vec2D([32, 32]), color=cfg.colors.player_color))
-object_manager.add(statics)
+    # load map
+    statics = load_map(os.path.join('assets', 'maps', 'test.npy'), cfg=cfg)
 
-action_manager = ActionManager(object_manager, cfg=cfg)
+    # init static objects
+    object_manager = ObjectManager(cfg=cfg)
+    object_manager.add(statics)
 
-# core loop
-while True:
-    # events
-    for event in pg.event.get():
-        # quit the game
-        if event.type == pg.QUIT:
-            quit()
-        if event.type == pg.KEYDOWN:
-            # movement
-            if event.key == cfg.controls.k_up:
-                action_manager.movement_buffer.x = 0; action_manager.movement_buffer.y = -1
-            if event.key == cfg.controls.k_down:
-                action_manager.movement_buffer.x = 0; action_manager.movement_buffer.y = 1
-            if event.key == cfg.controls.k_left:
-                action_manager.movement_buffer.x = -1; action_manager.movement_buffer.y = 0
-            if event.key == cfg.controls.k_right:
-                action_manager.movement_buffer.x = 1; action_manager.movement_buffer.y = 0
-        if event.type == pg.KEYUP:
-            # drop bomb
-            if event.key == cfg.controls.k_drop_bomb:
-                if object_manager.player.n_bombs > 0:
-                    action_manager.action_buffer.append(actions.DROP_BOMB)
-                    object_manager.player.n_bombs -= 1
+    # init players
+    add_players(object_manager, cfg)
 
-    # handle player movement
-    action_manager.handle_player_movement()
+    # init counters
+    add_counters(object_manager, cfg)
 
-    # handle player actions
-    action_manager.handle_player_actions()
+    # init action manager
+    action_manager = ActionManager(object_manager, cfg=cfg)
 
-    # handle collisions
-    action_manager.handle_player_collisions()
-    action_manager.handle_explosion_collisions()
+    # core loop
+    while True:
+        # events
+        for event in pg.event.get():
+            # quit the game
+            if event.type == pg.QUIT:
+                quit()
+            if event.type == pg.KEYDOWN:
+                # player 1 movement
+                for p in range(1, 3): # TODO: change to number of manually controlled players
+                    if event.key == getattr(cfg.controls, f'k_p{p}_up'):
+                        object_manager.players[p].movement_buffer.x = 0
+                        object_manager.players[p].movement_buffer.y = -1
+                    if event.key == getattr(cfg.controls, f'k_p{p}_down'):
+                        object_manager.players[p].movement_buffer.x = 0
+                        object_manager.players[p].movement_buffer.y = 1
+                    if event.key == getattr(cfg.controls, f'k_p{p}_left'):
+                        object_manager.players[p].movement_buffer.x = -1
+                        object_manager.players[p].movement_buffer.y = 0
+                    if event.key == getattr(cfg.controls, f'k_p{p}_right'):
+                        object_manager.players[p].movement_buffer.x = 1
+                        object_manager.players[p].movement_buffer.y = 0
+            if event.type == pg.KEYUP:
+                # drop bomb
+                for p in range(1, 3): # TODO: change to number of manually controlled players
+                    if event.key == getattr(cfg.controls, f'k_p{p}_drop_bomb'):
+                        if object_manager.players[p].n_bombs > 0:
+                            object_manager.players[p].action_buffer.append(actions.DROP_BOMB)
+                            object_manager.players[p].n_bombs -= 1
 
-    # update
-    screen.fill(cfg.colors.background_color)
+        # handle player movement
+        action_manager.handle_player_movement()
 
-    object_manager.draw_all(screen)
-    object_manager.update()
+        # handle player actions
+        action_manager.handle_player_actions()
 
-    pg.display.flip()
+        # handle collisions
+        action_manager.handle_player_collisions()
+        action_manager.handle_explosion_collisions()
 
-    # refresh rate
-    clock.tick(fps)
+        # update
+        screen.fill(cfg.colors.background_color)
 
-quit()
+        object_manager.draw_all(screen)
+        object_manager.update()
+
+        pg.display.flip()
+
+        # refresh rate
+        clock.tick(fps)
+
+    quit()

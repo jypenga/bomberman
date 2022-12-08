@@ -1,4 +1,4 @@
-This project is just me having some fun trying to write some clean object oriented Python code while emulating the classic Bomberman experience. In the future I'd like to introduce some additional features to the game, such as new mechanics, multiplayer, and more elaborate AI.
+I kind of wanted to make a game with high contrasts for my new OLED screen. So this project is just me having some fun trying to write some clean object oriented Python code while emulating the classic Bomberman experience. In the future I'd like to introduce some additional features to the game, such as new mechanics, multiplayer, and more elaborate AI.
 
 ### 05/12/2022
 

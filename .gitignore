@@ -6,6 +6,7 @@ __pycache__/
 *.so
 
 # distribution / packaging
+env/
 bin/
 build/
 develop-eggs/
@@ -49,3 +50,6 @@ coverage.xml
 
 # sphinx documentation
 docs/_build/
+
+# project specific
+ideas/

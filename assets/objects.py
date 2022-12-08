@@ -1,6 +1,8 @@
 import numpy as np
 import pygame as pg
 
+from config import config as cfg
+
 
 class Vec2D(np.ndarray):
     """Vector wrapper of numpy ndarray."""
@@ -46,7 +48,7 @@ class DefaultObject:
     """Default object structure."""
     def __init__(self, position, lifespan, color, text):
         """Initialize the object at position with lifespan and color."""
-        self.sprite = pg.Rect(position.x, position.y, 32, 32)
+        self.sprite = pg.Rect(position.x, position.y, cfg.display.tile_size, cfg.display.tile_size)
 
         self.position = position
         self.lifespan = lifespan
@@ -90,7 +92,7 @@ class BreakableWall(DefaultObject):
                     item_type = 'lives'
                 case 2:
                     item_type = 'speed'
-            
+
             object_manager.render_buffer.append(Item(self.position, item_type, item_color))
 
 
@@ -104,44 +106,60 @@ class Player(DefaultObject):
         # player attributes
         self.n_bombs = 99
         self.n_lives = 3
+        self.n_score = 0
         self.n_bomb_radius = 20
+
+        # movement buffer
+        self.movement_buffer = Vec2D([0, 0])
+        self.action_buffer = []
 
 
     def draw(self, screen, object_manager):
-        """Draw the object on the screen."""
-        self.sprite.update(self.position, (32, 32))
+        """Player is a dynamic object; update position and then draw."""
+        self.sprite.update(self.position, (self.sprite.width, self.sprite.height))
         super().draw(screen, object_manager)
 
 
 class Explosion(DefaultObject):
     """Explosion object."""
-    def __init__(self, position, color, text=None):
+    def __init__(self, position, player, color, text=None):
         super().__init__(position, .5, color, text)
+
+        # player whose bomb created the explosion
+        self.player = player
 
 
 class Bomb(DefaultObject):
     """Bomb object."""
-    def __init__(self, position, radius, color, text=None):
+    def __init__(self, position, player, color, text=None):
         super().__init__(position, 2, color, text)
 
+        # attributes
         self.vector = Vec2D([0, 0])
-        self.radius = radius
+        self.radius = player.n_bomb_radius
+
+        # player that placed the bomb
+        self.player = player
 
 
     def draw(self, screen, object_manager):
-        """Draw the object on the screen."""
-        self.sprite.update(self.position, (32, 32))
+        """Bomb is a dynamic object; update position and then draw."""
+        self.sprite.update(self.position, (self.sprite.width, self.sprite.height))
         super().draw(screen, object_manager)
 
 
     def create_explosion(self, object_manager, color):
         """Creates cross-like explosion based on radius."""
-        explosions = [Explosion(self.position, color=color)]
+        explosions = [Explosion(self.position,
+                                player=self.player,
+                                color=color)]
         _, sprites = object_manager.get_objects_sprites(SolidWall)
 
         for vec in [[0, -1], [0, 1], [-1, 0], [1, 0]]:
             for i in range(self.radius + 1):
-                explosion = Explosion(self.position + Vec2D(vec) * 32 * i, color=color)
+                explosion = Explosion(self.position + Vec2D(vec) * cfg.display.tile_size * i,
+                                      player=self.player,
+                                      color=color)
                 if explosion.sprite.collidelist(sprites) > 0:
                     break
                 explosions += [explosion]
@@ -173,13 +191,15 @@ class Item(DefaultObject):
 
 
     def draw(self, screen, object_manager):
-        """Draw the object on the screen."""
-        transparent = pg.Rect(self.position.x + 1, self.position.y + 1, 30, 30)
+        """Draw the inner text and border for an item object."""
+        super().draw(screen, object_manager)
+
+        transparent = pg.Rect(self.position.x + 1, self.position.y + 1, self.sprite.width - 2, self.sprite.height - 2)
         pg.draw.rect(screen, object_manager.cfg.colors.background_color, transparent)
 
         if self.text:
             font = object_manager.cfg.fonts.item_font
-            text = font.render(self.text, True, object_manager.cfg.colors.item_text_color)
+            text = font.render(self.text, True, self.color)
             text_rect = text.get_rect(center=self.sprite.center)
 
             screen.blit(text, text_rect)
@@ -194,3 +214,41 @@ class Item(DefaultObject):
                 pass
             case 'speed':
                 pass
+
+
+class DefaultCounter(DefaultObject):
+    """Default counter object."""
+    def __init__(self, position, color, text):
+        super().__init__(position, np.inf, color, text)
+
+
+    def draw(self, screen, object_manager):
+        sprite = pg.Rect(self.position.x, self.position.y, *object_manager.cfg.fonts.score_font.size(self.text))
+
+        font = object_manager.cfg.fonts.score_font
+        text = font.render(self.text, True, self.color)
+        text_rect = text.get_rect(center=sprite.center)
+
+        screen.blit(text, text_rect)
+
+
+class ScoreCounter(DefaultCounter):
+    """Score counter object."""
+    def __init__(self, position, player, color, text='0' * cfg.display.n_score_digits):
+        super().__init__(position, color, text)
+        self.player = player
+
+    def draw(self, screen, object_manager):
+        self.text = str(self.player.n_score).zfill(cfg.display.n_score_digits)
+        super().draw(screen, object_manager)
+
+
+class LiveCounter(DefaultCounter):
+    """Live counter object."""
+    def __init__(self, position, player, color, text='0'):
+        super().__init__(position, color, text)
+        self.player = player
+
+    def draw(self, screen, object_manager):
+        self.text = str(self.player.n_lives).zfill(1)
+        super().draw(screen, object_manager)
